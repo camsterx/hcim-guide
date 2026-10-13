@@ -17,7 +17,7 @@ const pendingKey=()=> 'rhr-pending-'+session.user.id+'-v1';
 const localWrite=()=>store(key(),[...done]);
 const nextStep=()=>all.find(s=>!done.has(s.id));
 const count=chapter=>chapter.steps.filter(s=>done.has(s[0])).length;
-const route=()=>{try{return decodeURIComponent(location.hash.slice(1))||'/guide';}catch{return '/guide';}};
+const route=()=>{try{const h=decodeURIComponent(location.hash.slice(1));return h.startsWith('step-')?'/guide':(h||'/guide');}catch{return '/guide';}};
 const href=ch=>'#/chapter/'+encodeURIComponent(ch.id);
 function stateLabel(){return session?syncState:(supabase?'Not signed in — stored on this device':'Cloud unavailable — stored on this device');}
 function show(text){flash=text;render();window.setTimeout(()=>{if(flash===text){flash='';render();}},5000);}
@@ -186,6 +186,6 @@ document.addEventListener('submit',async ev=>{
  catch(e){show('Error: '+e.message);}
  finally{btn.disabled=false;}
 });
-window.addEventListener('hashchange',()=>{document.body.classList.remove('nav-open');render();window.scrollTo({top:0,behavior:'instant'});});
+window.addEventListener('hashchange',()=>{document.body.classList.remove('nav-open');render();const h=decodeURIComponent(location.hash.slice(1));if(h.startsWith('step-')){requestAnimationFrame(()=>document.getElementById(h)?.scrollIntoView({behavior:'smooth',block:'start'}));}else{window.scrollTo({top:0,behavior:'auto'});}});
 window.addEventListener('online',()=>{if(Object.keys(pending).length)void push();});
 render();void beginAuth();
