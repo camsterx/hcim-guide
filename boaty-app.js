@@ -1,5 +1,8 @@
 import {sections, episodes, sourceUrl, sourceRevision} from './data/b0aty-index.js';
 import {notes} from './data/b0aty-notes.js';
+// Full Wiki-derived section text is fetched from a revision-pinned, third-party CC BY-NC-SA mirror.
+// It is not bundled or republished in this repository.
+const guideDataUrl='https://raw.githubusercontent.com/nandobrazil/hcim-guide-plugin/dcff9863f11f260c58077ab49b1b26545d820335/src/main/resources/guide.json';
 
 const root=document.getElementById('app');
 const cfg=window.HCIM_CONFIG||{};
@@ -12,12 +15,18 @@ const guestKey='rhr-b0aty-guest-v1';
 const userKey=id=>'rhr-b0aty-user-'+id+'-v1';
 const pendingKey=id=>'rhr-b0aty-pending-'+id+'-v1';
 const selectionKey='rhr-b0aty-selection-v1';
-const allIDs=new Set(sections.flatMap(s=>[s.id,...(notes[s.id]?.steps||[]).map(n=>s.id+'-'+n[0])]));
+const stepID=(s,i)=>s.id+'-step-'+String(i+1).padStart(3,'0');
+const allIDs=new Set(sections.flatMap(s=>[s.id,...Array.from({length:s.sourceStepCount},(_,i)=>stepID(s,i)),...(notes[s.id]?.steps||[]).map(n=>s.id+'-'+n[0])]));
+const stepsFor=s=>sourceSections?.[s.section-1]?.steps||[];
+const sourceCount=()=>sections.reduce((n,s)=>n+s.sourceStepCount,0);
+const sourceCompleted=()=>sections.reduce((n,s)=>n+Array.from({length:s.sourceStepCount},(_,i)=>completed.has(stepID(s,i))?1:0).reduce((a,b)=>a+b,0),0);
+let sourceSections=null,sourceStatus='Loading complete B0aty instructions…',wikiExpanded=true;
+
 const bankDone=()=>sections.filter(s=>completed.has(s.id)).length;
 const stepDone=s=>notes[s.id]?.steps.filter(n=>completed.has(s.id+'-'+n[0])).length||0;
 const firstPending=()=>sections.findIndex(s=>!completed.has(s.id));
 const sectionHash=()=>{const m=location.hash.match(/^#\/bank\/(\d+)$/);return m?Math.min(sections.length-1,Math.max(0,Number(m[1]))):null};
-let current=sectionHash()??load(selectionKey,0);
+let current=sectionHash()??load(selectionKey,2);
 if(!Number.isInteger(current)||current<0||current>=sections.length)current=0;
 let completed=new Set(load(guestKey,[]).filter(x=>allIDs.has(x)));
 let pending={},session=null,cloudLoaded=false,syncing=false,syncStatus='Local progress only';
@@ -48,6 +57,35 @@ function sidebarHTML(){
  }).join('');
  return '<aside class="sidebar"><a class="brand" href="#/bank/0"><span class="brand-emblem">♜</span><span><strong>RED HELM ROAD</strong><small>B0ATY HCIM V3 TRACKER</small></span></a><div class="sidebar-top">THE FULL ROUTE <small>'+bankDone()+' / '+sections.length+' banks</small></div>'+grouped+'<div class="sidebar-bottom"><a href="./original.html">Previous guide archive ↗</a><a target="_blank" rel="noopener noreferrer" href="'+sourceUrl+'">Original OSRS Wiki guide ↗</a></div></aside>';
 }
+function wikiHTML(s){
+ const list=stepsFor(s);
+ const loading=!sourceSections;
+ const note=!loading && s.sourceStepCount!==list.length;
+ const count=Array.from({length:s.sourceStepCount},(_,i)=>completed.has(stepID(s,i))?1:0).reduce((a,b)=>a+b,0);
+ let items='';
+ if(loading)items='<div class="source-only"><p>'+escapeHTML(sourceStatus)+'</p><button class="primary" data-action="reload-source">Retry loading instructions</button></div>';
+ else if(note)items='<div class="risk-note">The linked source changed. This section is not shown until its instruction counts are checked, to avoid mixing up saved ticks.</div>';
+ else items='<div class="wiki-steps">'+list.map((st,i)=>{
+   const id=stepID(s,i),done=completed.has(id);
+   const danger=/stronghold of security|taverley dungeon|wilderness|wintertodt|aggressive|catablepon|spider max|if you take .*damage|boss|zulrah|demon|fighting|kill a bear|raid|inferno|revenant|cerberus/i.test(st.text);
+   return '<button type="button" aria-pressed="'+done+'" class="wiki-step '+(done?'done':'')+'" data-toggle="'+id+'"><span class="check" aria-hidden="true">'+(done?'✓':'')+'</span><span class="wiki-step-body"><span class="wiki-step-number">'+String(i+1).padStart(2,'0')+(danger?' · ⚠ FOCUSED PLAY':'')+'</span><span class="wiki-step-text">'+escapeHTML(st.text)+'</span></span></button>';
+ }).join('')+'</div>';
+ return '<details id="wiki-notes" class="wiki-collapsible" '+(wikiExpanded?'open':'')+'>'+
+ '<summary><span><strong>All B0aty Wiki steps & notes</strong><small>'+count+' / '+s.sourceStepCount+' ticked · Expand or collapse · Tap each step to save progress</small></span><span class="chevron">▾</span></summary>'+
+ '<div class="wiki-body">'+items+'<div class="wiki-credit">Instructions from a snapshot of <a href="'+sourceUrl+'" target="_blank" rel="noopener noreferrer">B0aty HCIM Guide V3 on the OSRS Wiki</a>, through an independently hosted structured guide mirror. Wiki content © contributors, <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>. Original guide maintained separately. Other live Wiki formatting, images and links may differ.</div></div>'+
+ '</details>';
+}
+async function loadWikiData(){
+ sourceStatus='Loading complete B0aty instructions…';render();
+ try{
+  const response=await fetch(guideDataUrl,{mode:'cors'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const json=await response.json();
+  if(!Array.isArray(json.sections)||json.sections.length!==sections.length)throw Error('Section count changed; verification needed');
+  if(sections.some((s,i)=>json.sections[i].steps?.length!==s.sourceStepCount))throw Error('Source section count changed; saved step IDs protected');
+  sourceSections=json.sections;sourceStatus='Instructions loaded';render();
+ }catch(error){sourceStatus='Could not load the mirrored Wiki instructions: '+error.message+'. You can retry without losing existing progress.';render();}
+}
 function notesHTML(s){
  const note=notes[s.id];
  if(!note)return '<div class="source-only"><h3>Follow the source instructions</h3><p>This section has '+s.sourceStepCount+' steps in B0aty V3. Follow the Wiki’s exact banking, quest and item sequence, then mark this bank complete here.</p>'+sourceLink(s,'Open full source checklist')+'</div>';
@@ -63,17 +101,18 @@ function viewHTML(){
  const s=currentSection(),i=current;
  const count=bankDone(),rate=(count/sections.length*100).toFixed(1);
  const list=sections.map((s,j)=>({s,j})).filter(x=>!onlyRemaining||!completed.has(x.s.id));
+ const stepCount=sourceCount(),stepCountDone=sourceCompleted();
  const progress='<div class="progress-bar"><div style="width:'+rate+'%"></div></div>';
  const options=episodes.map(ep=>'<optgroup label="'+escapeHTML(ep)+'">'+list.filter(x=>x.s.episode===ep).map(x=>'<option value="'+x.j+'" '+(x.j===current?'selected':'')+'>'+escapeHTML(x.s.title)+' · #'+(x.j+1)+'</option>').join('')+'</optgroup>').join('');
  return '<div class="topbar"><button class="menu" data-action="menu" aria-label="Toggle chapter menu">☰</button><div class="brand-mini">RED HELM ROAD <span>· B0ATY HCIM V3</span></div><button class="cloud" data-action="account">'+(session?'☁ '+escapeHTML(syncStatus):'◯ '+(supabase?'Sign in to save':'Offline save'))+'</button></div>'+
- '<div class="intro"><div class="eyebrow">CADVYN · HARDCORE IRONMAN</div><h1>Follow the route. <span>Keep the helm.</span></h1><p>Track B0aty HCIM V3 bank by bank, with additional safety notes for work-from-home play. Read the original guide for exact actions and inventory lists.</p>'+
- '<div class="metrics"><div><b>'+count+' <small>/ '+sections.length+'</small></b><label>Stages completed</label></div><div><b>'+rate+'%</b><label>Route tracked</label></div><div><b>'+episodes.length+'</b><label>Episodes indexed</label></div></div>'+progress+'</div>'+
+ '<div class="intro"><div class="eyebrow">CADVYN · HARDCORE IRONMAN</div><h1>Follow the route. <span>Keep the helm.</span></h1><p>Follow B0aty HCIM V3 here: every step has its own tickbox, and the full Wiki-derived notes live in a collapsible section. Additional HCIM warnings help you decide when to stop for work.</p>'+
+ '<div class="metrics"><div><b>'+count+' <small>/ '+sections.length+'</small></b><label>Banks completed</label></div><div><b>'+stepCountDone+' <small>/ '+stepCount+'</small></b><label>Individual steps ticked</label></div><div><b>'+episodes.length+'</b><label>Episodes indexed</label></div></div>'+progress+'</div>'+
  '<div class="notice">🛡️ <span><b>HCIM first:</b> Save risky quests, Stronghold trips, Wintertodt and PvM for uninterrupted periods. This adaptation tracks the Wiki; never treat a risk badge as a complete safety assessment.</span></div>'+
  '<div class="jump"><label for="bank-select">Jump to a bank / section</label><select id="bank-select">'+options+'</select><label class="hide"><input id="hide-completed" type="checkbox" '+(onlyRemaining?'checked':'')+'> Hide completed</label></div>'+
- '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(s.title)+'</h2><p>Complete B0aty’s <strong>'+s.sourceStepCount+' original instructions</strong> for this section. Then confirm completion below to sync this bank across devices.</p>'+
+ '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(s.title)+'</h2><p><strong>'+s.sourceStepCount+' individually tickable instructions</strong> are inside the expandable section below. Check each one as you complete it — no need to leave this site.</p>'+
  '<div class="video-links">'+sourceLink(s,'Original OSRS Wiki steps')+(s.youtubeId?' <a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+encodeURIComponent(s.youtubeId)+'">Episode video ↗</a>':'')+'</div></div>'+
- notesHTML(s)+
- '<div class="complete-panel '+(completed.has(s.id)?'finished':'')+'"><div><h3>'+(completed.has(s.id)?'Bank marked complete':'Finished this entire bank?')+'</h3><p>'+(completed.has(s.id)?'You can undo this if needed.':'Tick only after following every instruction in the Wiki section.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(completed.has(s.id)?'✓ Completed · Undo':'Mark bank complete ✓')+'</button></div>'+
+ wikiHTML(s)+notesHTML(s)+
+ '<div class="complete-panel '+(completed.has(s.id)?'finished':'')+'"><div><h3>'+(completed.has(s.id)?'Bank completed':'Finished every step in this bank?')+'</h3><p>'+(completed.has(s.id)?'Bank and steps are complete.':'Tick the steps individually above, or use this shortcut to mark them all complete.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(completed.has(s.id)?'✓ Completed · Undo':'Mark all steps complete ✓')+'</button></div>'+
  '<div class="pager"><button data-bank="'+(i-1)+'" '+(i<=0?'disabled':'')+'>← Previous</button><button data-action="resume">Next unfinished</button><button data-bank="'+(i+1)+'" '+(i>=sections.length-1?'disabled':'')+'>Next →</button></div>'+
  '<div class="bottom-links"><a href="./original.html">View previous 99 Firemaking route</a><span>Source index: '+escapeHTML(sourceRevision)+' · Unofficial fan project, no affiliation with Jagex</span></div>';
 }
@@ -92,8 +131,20 @@ function render(){
 function toggle(id){
  if(!allIDs.has(id))return;
  const state=!completed.has(id);
- state?completed.add(id):completed.delete(id);writeLocal();
- if(session){queued[id]=state;save(syncKey(),queued);syncStatus='Waiting to sync';if(cloudLoaded)void sync();}
+ const update=(key,value)=>{value?completed.add(key):completed.delete(key);if(session)queued[key]=value;};
+ const bank=sections.find(s=>s.id===id);
+ if(bank){
+  update(id,state);
+  for(let i=0;i<bank.sourceStepCount;i++)update(stepID(bank,i),state);
+ }else{
+  update(id,state);
+  const owner=sections.find(s=>id.startsWith(s.id+'-step-'));
+  if(owner){
+   const allDone=Array.from({length:owner.sourceStepCount},(_,i)=>stepID(owner,i)).every(x=>completed.has(x));
+   update(owner.id,allDone);
+  }
+ }
+ writeLocal();if(session){save(syncKey(),queued);syncStatus='Waiting to sync';if(cloudLoaded)void sync();}
  render();
 }
 let cloudCounter=0;
@@ -105,10 +156,16 @@ async function loadSession(newSession){
  completed=new Set(load(userKey(id),[]).filter(x=>allIDs.has(x)));
  queued=load(pendingKey(id),{});
  syncStatus='Loading saved progress…';render();
- const {data,error}=await supabase.from('step_progress').select('step_id,is_completed').eq('user_id',id);
+ let rows=[],failed=null;
+ for(let offset=0;offset<10000;offset+=1000){
+  const page=await supabase.from('step_progress').select('step_id,is_completed').eq('user_id',id).range(offset,offset+999);
+  if(page.error){failed=page.error;break;}
+  rows.push(...(page.data||[]));
+  if((page.data||[]).length<1000)break;
+ }
  if(task!==cloudCounter||session?.user?.id!==id)return;
- if(error){syncStatus='Offline copy retained (cloud read failed)';render();return;}
- const server=new Set((data||[]).filter(x=>x.is_completed&&allIDs.has(x.step_id)).map(x=>x.step_id));
+ if(failed){syncStatus='Offline copy retained (cloud read failed)';render();return;}
+ const server=new Set(rows.filter(x=>x.is_completed&&allIDs.has(x.step_id)).map(x=>x.step_id));
  for(const [step,value] of Object.entries(queued)){if(!allIDs.has(step))continue;value?server.add(step):server.delete(step);}
  completed=server;writeLocal();cloudLoaded=true;syncStatus='All changes synced';render();
  if(Object.keys(queued).length)void sync();
@@ -117,12 +174,13 @@ async function sync(){
  if(!session||!cloudLoaded||syncing)return;
  syncing=true;const id=session.user.id;syncStatus='Syncing…';render();
  while(session?.user?.id===id && Object.keys(queued).length){
-  const [step,value]=Object.entries(queued)[0];
+  const batch=Object.entries(queued).slice(0,80);
   try {
-   const {error}=await supabase.from('step_progress').upsert({user_id:id,step_id:step,is_completed:value,updated_at:new Date().toISOString()},{onConflict:'user_id,step_id'});
+   const now=new Date().toISOString();
+   const {error}=await supabase.from('step_progress').upsert(batch.map(([step,value])=>({user_id:id,step_id:step,is_completed:value,updated_at:now})),{onConflict:'user_id,step_id'});
    if(error)throw error;
    if(session?.user?.id!==id)break;
-   if(queued[step]===value)delete queued[step];
+   for(const [step,value] of batch)if(queued[step]===value)delete queued[step];
    save(pendingKey(id),queued);
   }catch(e){syncing=false;syncStatus='Upload failed — changes retained locally';render();return;}
  }
@@ -161,8 +219,10 @@ document.addEventListener('click',async e=>{
   if(a==='sync'){if(cloudLoaded)await sync();else await loadSession(session);modal=false;render();}
   if(a==='merge')merge(load(guestKey,[]));
   if(a==='export')backup();
+  if(a==='reload-source')void loadWikiData();
  }catch(err){announce('Action failed: '+err.message);}
 });
+document.addEventListener('toggle',e=>{if(e.target.id==='wiki-notes')wikiExpanded=e.target.open;},true);
 document.addEventListener('change',async e=>{
  if(e.target.id==='bank-select'){routeTo(Number(e.target.value));return;}
  if(e.target.id==='hide-completed'){onlyRemaining=e.target.checked;render();return;}
@@ -178,4 +238,4 @@ document.addEventListener('submit',async e=>{
 });
 window.addEventListener('hashchange',()=>{const n=sectionHash();if(n!==null){current=n;save(selectionKey,n);}document.body.classList.remove('nav-open');render();window.scrollTo(0,0);});
 window.addEventListener('online',()=>{if(Object.keys(queued).length)void sync();});
-render();void startAuth();
+render();void loadWikiData();void startAuth();
