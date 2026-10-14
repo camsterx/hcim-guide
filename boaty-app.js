@@ -52,7 +52,7 @@ function routeTo(i){
  if(location.hash!=='#/bank/'+current){location.hash='#/bank/'+current;}else render();
 }
 function sourceLink(s,label){
- return '<a target="_blank" rel="noopener noreferrer" href="'+escapeHTML(sourceAnchor(s))+'">'+(label||'Read B0aty’s full instructions')+' ↗</a>';
+ return '<a target="_blank" rel="noopener noreferrer" href="'+escapeHTML(sourceAnchor(s))+'">'+(label||'Read the OSRS Wiki guide')+' ↗</a>';
 }
 function sidebarHTML(){
  const grouped=episodes.map((ep,i)=>{
@@ -61,10 +61,10 @@ function sidebarHTML(){
   const active=list.some(s=>s.sectionIndex===current);
   return '<div class="episode '+(active?'open':'')+'"><button class="episode-head" data-episode="'+i+'"><span>EP '+(i+1)+'</span><strong>'+escapeHTML(ep.replace(/^Episode \d+ ?[-–]? ?/,''))+'</strong><small>'+done+'/'+list.length+'</small></button><div class="banks">'+list.map(s=>{
    let selected=s.sectionIndex===current;
-   return '<button class="bank-link '+(selected?'selected':'')+'" data-bank="'+s.sectionIndex+'"><span class="bank-dot '+(completed.has(s.id)?'done':'')+'">'+(completed.has(s.id)?'✓':String(s.sectionIndex+1).padStart(2,'0'))+'</span><span>'+escapeHTML(s.title)+'</span></button>';
+   return '<button class="bank-link '+(selected?'selected':'')+'" data-bank="'+s.sectionIndex+'"><span class="bank-dot '+(bankCompleted(s)?'done':'')+'">'+(bankCompleted(s)?'✓':String(s.sectionIndex+1).padStart(2,'0'))+'</span><span>'+escapeHTML(s.title)+'</span></button>';
   }).join('')+'</div></div>';
  }).join('');
- return '<aside class="sidebar"><a class="brand" href="#/bank/0"><span class="brand-emblem">♜</span><span><strong>RED HELM ROAD</strong><small>B0ATY HCIM V3 TRACKER</small></span></a><div class="sidebar-top">THE FULL ROUTE <small>'+bankDone()+' / '+sections.length+' banks</small></div>'+grouped+'<div class="sidebar-bottom"><a href="./original.html">Previous guide archive ↗</a><a target="_blank" rel="noopener noreferrer" href="'+sourceUrl+'">Original OSRS Wiki guide ↗</a></div></aside>';
+ return '<aside class="sidebar"><a class="brand" href="#/bank/0"><span class="brand-emblem">♜</span><span><strong>RED HELM ROAD</strong><small>HCIM ROUTE TRACKER</small></span></a><div class="sidebar-top">THE FULL ROUTE <small>'+bankDone()+' / '+sections.length+' banks</small></div>'+grouped+'<div class="sidebar-bottom"><a href="./original.html">Previous guide archive ↗</a><a target="_blank" rel="noopener noreferrer" href="'+sourceUrl+'">Original OSRS Wiki guide ↗</a></div></aside>';
 }
 function stepTextLabel(text){
  const clean=String(text).replace(/https?:\/\/[^\s<>"']+/g,'').replace(/\s*[-–]\s*(?:Safespot guide|Video guide)[^\n]*$/i,'').trim();
@@ -139,15 +139,15 @@ function viewHTML(){
  const stepCount=sourceCount(),stepCountDone=sourceCompleted();
  const progress='<div class="progress-bar"><div style="width:'+rate+'%"></div></div>';
  const options=episodes.map(ep=>'<optgroup label="'+escapeHTML(ep)+'">'+list.filter(x=>x.s.episode===ep).map(x=>'<option value="'+x.j+'" '+(x.j===current?'selected':'')+'>'+escapeHTML(x.s.title)+' · #'+(x.j+1)+'</option>').join('')+'</optgroup>').join('');
- return '<div class="topbar"><button class="menu" data-action="menu" aria-label="Toggle chapter menu">☰</button><div class="brand-mini">RED HELM ROAD <span>· B0ATY HCIM V3</span></div><button class="cloud" data-action="account">'+(session?'☁ '+escapeHTML(syncStatus):'◯ '+(supabase?'Sign in to save':'Offline save'))+'</button></div>'+
- '<div class="intro"><div class="eyebrow">CADVYN · HARDCORE IRONMAN</div><h1>Follow the route. <span>Keep the helm.</span></h1><p>Follow B0aty HCIM V3 here: every step has its own tickbox, and the full Wiki-derived notes live in a collapsible section. Additional HCIM warnings help you decide when to stop for work.</p>'+
+ return '<div class="topbar"><button class="menu" data-action="menu" aria-label="Toggle chapter menu">☰</button><div class="brand-mini">RED HELM ROAD <span>· HCIM GUIDE</span></div><button class="cloud" data-action="account">'+(session?'☁ '+escapeHTML(syncStatus):'◯ '+(supabase?'Sign in to save':'Offline save'))+'</button></div>'+
+ '<div class="intro"><div class="eyebrow">CADVYN · HARDCORE IRONMAN</div><h1>Follow the route. <span>Keep the helm.</span></h1><p>Follow the route step by step. Every task is independently tickable, with the Wiki’s notes, screenshots and videos behind compact dropdowns. Progress saves as you go.</p>'+
  '<div class="metrics"><div><b>'+count+' <small>/ '+sections.length+'</small></b><label>Banks completed</label></div><div><b>'+stepCountDone+' <small>/ '+stepCount+'</small></b><label>Individual steps ticked</label></div><div><b>'+episodes.length+'</b><label>Episodes indexed</label></div></div>'+progress+'</div>'+
  '<div class="notice">🛡️ <span><b>HCIM first:</b> Save risky quests, Stronghold trips, Wintertodt and PvM for uninterrupted periods. This adaptation tracks the Wiki; never treat a risk badge as a complete safety assessment.</span></div>'+
  '<div class="jump"><label for="bank-select">Jump to a bank / section</label><select id="bank-select">'+options+'</select><label class="hide"><input id="hide-completed" type="checkbox" '+(onlyRemaining?'checked':'')+'> Hide completed</label></div>'+
- '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(s.title)+'</h2><p><strong>'+idsForBank(s).length+' individually tickable instructions</strong> are inside the expandable section below. Check each one as you complete it — no need to leave this site.</p>'+
+ '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(s.title)+'</h2><p><strong>'+idsForBank(s).length+' individually tickable instructions</strong> appear below, with supplementary Wiki resources collapsed underneath each relevant step.</p>'+
  '<div class="video-links">'+sourceLink(s,'Original OSRS Wiki steps')+(s.youtubeId?' <a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+encodeURIComponent(s.youtubeId)+'">Episode video ↗</a>':'')+'</div></div>'+
  wikiHTML(s)+
- '<div class="complete-panel '+(completed.has(s.id)?'finished':'')+'"><div><h3>'+(completed.has(s.id)?'Bank completed':'Finished every step in this bank?')+'</h3><p>'+(completed.has(s.id)?'Bank and steps are complete.':'Tick the steps individually above, or use this shortcut to mark them all complete.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(completed.has(s.id)?'✓ Completed · Undo':'Mark all steps complete ✓')+'</button></div>'+
+ '<div class="complete-panel '+(bankCompleted(s)?'finished':'')+'"><div><h3>'+(bankCompleted(s)?'Section completed':'Finished every step in this section?')+'</h3><p>'+(bankCompleted(s)?'All instructions in this section are complete.':'Tick the steps individually above, or use this shortcut to mark them all complete.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(bankCompleted(s)?'✓ Completed · Undo':'Mark all steps complete ✓')+'</button></div>'+
  '<div class="pager"><button data-bank="'+(i-1)+'" '+(i<=0?'disabled':'')+'>← Previous</button><button data-action="resume">Next unfinished</button><button data-bank="'+(i+1)+'" '+(i>=sections.length-1?'disabled':'')+'>Next →</button></div>'+
  '<div class="bottom-links"><a href="./original.html">View previous 99 Firemaking route</a><span>Source index: '+escapeHTML(sourceRevision)+' · Unofficial fan project, no affiliation with Jagex</span></div>';
 }
@@ -229,9 +229,9 @@ async function startAuth(){
  }catch(e){syncStatus='Sign-in unavailable';render();}
 }
 function backup(){
- const obj={guide:'B0aty HCIM V3 route',version:1,completed:[...completed],exportedAt:new Date().toISOString()};
+ const obj={guide:'HCIM route',version:1,completed:[...completed],exportedAt:new Date().toISOString()};
  const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));
- const a=document.createElement('a');a.href=url;a.download='cadvyn-hcim-b0aty-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const a=document.createElement('a');a.href=url;a.download='red-helm-road-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function merge(ids){
  let n=0;for(const id of ids){if(!allIDs.has(id)||completed.has(id))continue;completed.add(id);n++;if(session)queued[id]=true;}
