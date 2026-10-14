@@ -2,7 +2,10 @@ import {sections, episodes, sourceUrl, sourceRevision} from './data/b0aty-index.
 import {notes} from './data/b0aty-notes.js';
 // Full Wiki-derived section text is fetched from a revision-pinned, third-party CC BY-NC-SA mirror.
 // It is not bundled or republished in this repository.
-const guideDataUrl='https://raw.githubusercontent.com/nandobrazil/hcim-guide-plugin/dcff9863f11f260c58077ab49b1b26545d820335/src/main/resources/guide.json';
+const guideDataUrls=[
+ 'https://raw.githubusercontent.com/nandobrazil/hcim-guide-plugin/dcff9863f11f260c58077ab49b1b26545d820335/src/main/resources/guide.json',
+ 'https://cdn.jsdelivr.net/gh/nandobrazil/hcim-guide-plugin@dcff9863f11f260c58077ab49b1b26545d820335/src/main/resources/guide.json'
+];
 
 const root=document.getElementById('app');
 const cfg=window.HCIM_CONFIG||{};
@@ -78,9 +81,16 @@ function wikiHTML(s){
 async function loadWikiData(){
  sourceStatus='Loading complete B0aty instructions…';render();
  try{
-  const response=await fetch(guideDataUrl,{mode:'cors'});
-  if(!response.ok)throw Error('HTTP '+response.status);
-  const json=await response.json();
+  let json=null,lastError=null;
+  for(const url of guideDataUrls){
+   try{
+    const response=await fetch(url,{mode:'cors'});
+    if(!response.ok)throw Error('HTTP '+response.status);
+    json=await response.json();
+    break;
+   }catch(error){lastError=error;}
+  }
+  if(!json)throw lastError||Error('Both instruction sources are unavailable');
   if(!Array.isArray(json.sections)||json.sections.length!==sections.length)throw Error('Section count changed; verification needed');
   if(sections.some((s,i)=>json.sections[i].steps?.length!==s.sourceStepCount))throw Error('Source section count changed; saved step IDs protected');
   sourceSections=json.sections;sourceStatus='Instructions loaded';render();
@@ -158,7 +168,7 @@ async function loadSession(newSession){
  syncStatus='Loading saved progress…';render();
  let rows=[],failed=null;
  for(let offset=0;offset<10000;offset+=1000){
-  const page=await supabase.from('step_progress').select('step_id,is_completed').eq('user_id',id).range(offset,offset+999);
+  const page=await supabase.from('step_progress').select('step_id,is_completed').eq('user_id',id).order('step_id',{ascending:true}).range(offset,offset+999);
   if(page.error){failed=page.error;break;}
   rows.push(...(page.data||[]));
   if((page.data||[]).length<1000)break;
