@@ -28,3 +28,28 @@
  .wiki-step{padding:13px 10px;gap:10px}
  .wiki-step-text{font-size:13px}
 }
+/* The route stays visible; only supporting information expands beneath its step. */
+.wiki-heading{padding:17px 20px;background:#17362d;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.wiki-heading strong{font-size:17px;color:var(--text)}
+.wiki-heading small{color:#b3d7c7;font-size:12px}
+.wiki-step-entry{background:#0d1b20}
+.wiki-step-entry:not(:last-child){border-bottom:1px solid var(--line)}
+.wiki-step-entry>.wiki-step{border-bottom:0}
+.step-details{margin:0 14px 13px 55px;background:#11282c;border:1px solid #31554e;border-radius:9px;overflow:hidden}
+.wiki-collapsible .step-details summary{background:transparent;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;list-style:none}
+.wiki-collapsible .step-details summary::-webkit-details-marker{display:none}
+.wiki-collapsible .step-details[open] summary{border-bottom:1px solid #31554e}
+.step-detail-body{padding:10px 12px 13px;color:#c6d8d2;font-size:13px}
+.step-detail-body p{margin:0 0 9px}
+.step-detail-links{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.step-detail-links a{overflow-wrap:anywhere}
+.step-video{max-width:580px;margin-top:12px}
+.step-video iframe{display:block;width:100%;aspect-ratio:16/9;height:auto;min-height:180px;border:0;border-radius:8px;background:#050b0e}
+@media(max-width:670px){
+ .wiki-heading{padding:14px;display:block}
+ .wiki-heading strong,.wiki-heading small{display:block}
+ .wiki-heading small{margin-top:4px}
+ .step-details{margin:0 8px 12px 45px}
+ .wiki-collapsible .step-details summary{padding:11px 12px;min-height:40px}
+ .step-video iframe{min-height:160px}
+}
