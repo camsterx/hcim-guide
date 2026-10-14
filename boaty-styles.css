@@ -28,3 +28,33 @@
  .wiki-step{padding:13px 10px;gap:10px}
  .wiki-step-text{font-size:13px}
 }
+
+/* Every checklist row has its own button, while rich source notes stay in a
+   separate native details element. No nested interactive controls. */
+.wiki-step{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;background:#0d1b20;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.wiki-step:last-child{border-bottom:0}
+.wiki-step:hover{background:#132927}
+.wiki-step.done{opacity:1}
+.wiki-step-check{border:0;background:transparent;color:var(--text);padding:0;flex:0 0 32px;width:32px;min-height:36px;display:grid;justify-items:center;align-content:start;cursor:pointer}
+.wiki-step-check:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:7px}
+.wiki-step-check .check{width:26px;height:26px;pointer-events:none}
+.wiki-step.done .wiki-step-check .check{background:#234e38;border-color:#51e2a7}
+.wiki-step-body{flex:1;min-width:0}
+.wiki-step .wiki-step-text.step-done{text-decoration:line-through;text-decoration-color:#729d8b;opacity:.72}
+.step-resources{margin:10px 0 0;background:#172c2e;border:1px solid #31524d;border-radius:8px;overflow:hidden}
+.step-resources>summary{cursor:pointer;list-style:none;padding:10px 12px;color:#c3e8db;font-size:12px;display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:700}
+.step-resources>summary::-webkit-details-marker{display:none}
+.step-resources>summary span{color:var(--green)}
+.step-resources[open]>summary span{transform:rotate(180deg)}
+.step-resource-content{padding:12px;border-top:1px solid #31524d;display:grid;gap:12px;color:#b5d5c7;font-size:12px;overflow-wrap:anywhere}
+.step-resource-content p{margin:0;line-height:1.6}
+.step-resource-content a{color:var(--green);font-size:12px;line-height:1.55}
+.step-resource-content img{display:block;width:100%;height:auto;max-width:650px;border-radius:8px;border:1px solid #31524d}
+.step-video{aspect-ratio:16/9;width:100%;max-width:650px;border-radius:8px;overflow:hidden;background:#071015}
+.step-video iframe{display:block;width:100%;height:100%;border:0}
+@media(max-width:670px){
+ .wiki-step{padding:12px 9px;gap:8px}
+ .wiki-step-check{width:32px;min-width:32px;min-height:40px}
+ .step-resources>summary{padding:11px 9px}
+ .step-resource-content{padding:10px}
+}
