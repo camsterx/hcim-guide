@@ -9,16 +9,19 @@ Personal, unofficial Old School RuneScape **Hardcore Ironman** guide and progres
 ## What the current website does
 
 - **Follows B0aty's V3 route order**, indexing **15 episodes / 236 banks and other route sections**, based on source metadata from 13 March 2026.
-- Browse banks, jump to an episode, track completion of each section and pick the next unfinished section.
+- Browse banks and episodes, open directly at Bank 2 for new visitors, and tick every individual source instruction. Completion persists per step and per bank.
+- The **All B0aty Wiki steps & notes** disclosure opens inside the guide. It loads the full text of the 2,910 steps in a pinned, externally hosted source snapshot; no need to switch tabs while following the route.
+- A full-bank button marks all contained step IDs as complete (and can undo them).
 - Provides **original additional HCIM safety and preparation notes for the opening banks**.
-- Links to the **complete OSRS Wiki instructions** for each bank. **The full source instructions are not reproduced here.** When you finish the Wiki steps, tick that bank complete.
+- The complete **text instructions and inline notes** are retrieved by the user's browser from a pinned GitHub-hosted [structured mirror](https://github.com/nandobrazil/hcim-guide-plugin) of the OSRS Wiki guide. The tracker does not rehost the 679 KB guide dataset. Formatting, embedded images, links and newer wiki edits may differ, so the original Wiki remains linked for attribution and updates.
+- The source text is available whenever either raw.githubusercontent.com or jsDelivr is reachable. **Cloud progress saves independently of the third-party source being accessible.**
 - Save bank ticks and note ticks in Supabase when signed in, using a personal email magic link. Both tables have row-level security.
 - Download/import a JSON progress backup.
 - The **previous 65-step custom Firemaking route** is still available at [original.html](./original.html), using its original step IDs and stored progress.
 
 ## Source and licensing
 
-This app is an independently written tracker *for* the B0aty route, not an endorsed or official version of the guide. Bank titles, structure, and video references are credited to the OSRS Wiki project and the creator. OSRS Wiki content is published under **CC BY-NC-SA 3.0**; when redistributing adapted content follow the attribution, non-commercial, and share-alike terms. The independent supplemental notes are original. Always check the Wiki's latest text for source updates, precise inventory counts and combat requirements.
+This app is an independently written tracker *for* the B0aty route, not an endorsed or official version of the guide. Bank titles, structure, video references and displayed source instructions are credited to the OSRS Wiki project, B0aty and the [community structured mirror](https://github.com/nandobrazil/hcim-guide-plugin). OSRS Wiki content is published under **CC BY-NC-SA 3.0**; when redistributing adapted content follow the attribution, non-commercial, and share-alike terms. The independent supplemental notes are original. Always check the Wiki's latest text for source updates, precise inventory counts and combat requirements.
 
 ## Hardcore warnings
 
@@ -50,7 +53,7 @@ The tables `step_progress` and `hcim_profiles` are already present in this separ
 ## Files
 
 - `index.html` / `boaty-styles.css` / `boaty-app.js`: Current B0aty route tracker.
-- `data/b0aty-index.js`: Route metadata (15 episodes, 236 sections, source credit).
+- `data/b0aty-index.js`: Route metadata (15 episodes, 236 sections, 2,910 original steps, source credit). The full Wiki-derived text is downloaded in the user's browser on demand from a **specific pinned commit**, not copied to this repository.
 - `data/b0aty-notes.js`: Original, extra HCIM advice and condensed checkpoints for initial sections.
 - `original.html` / `app.js` / `data/chapters.js` / `styles.css`: Original custom Firemaking route, retained intact for rollback and old progress.
 - `config.js`: Publishable browser Supabase credentials only.
