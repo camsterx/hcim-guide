@@ -3,6 +3,7 @@ import {notes} from './data/b0aty-notes.js';
 // Full Wiki-derived section text is fetched from a revision-pinned, third-party CC BY-NC-SA mirror.
 // It is not bundled or republished in this repository.
 const guideDataUrls=[
+ './data/b0aty-guide.json',
  'https://raw.githubusercontent.com/nandobrazil/hcim-guide-plugin/dcff9863f11f260c58077ab49b1b26545d820335/src/main/resources/guide.json',
  'https://cdn.jsdelivr.net/gh/nandobrazil/hcim-guide-plugin@dcff9863f11f260c58077ab49b1b26545d820335/src/main/resources/guide.json'
 ];
@@ -75,7 +76,7 @@ function wikiHTML(s){
  }).join('')+'</div>';
  return '<details id="wiki-notes" class="wiki-collapsible" '+(wikiExpanded?'open':'')+'>'+
  '<summary><span><strong>All B0aty Wiki steps & notes</strong><small>'+count+' / '+s.sourceStepCount+' ticked · Expand or collapse · Tap each step to save progress</small></span><span class="chevron">▾</span></summary>'+
- '<div class="wiki-body">'+items+'<div class="wiki-credit">Instructions from a snapshot of <a href="'+sourceUrl+'" target="_blank" rel="noopener noreferrer">B0aty HCIM Guide V3 on the OSRS Wiki</a>, through an independently hosted structured guide mirror. Wiki content © contributors, <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>. Original guide maintained separately. Other live Wiki formatting, images and links may differ.</div></div>'+
+ '<div class="wiki-body">'+items+'<div class="wiki-credit">Instructions from a snapshot of <a href="'+sourceUrl+'" target="_blank" rel="noopener noreferrer">B0aty HCIM Guide V3 on the OSRS Wiki</a>, as a locally hosted CC-licensed dataset adapted from a structured community mirror. Wiki content © contributors, <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>. Original guide maintained separately. Other live Wiki formatting, images and links may differ.</div></div>'+
  '</details>';
 }
 async function loadWikiData(){
@@ -90,7 +91,7 @@ async function loadWikiData(){
     break;
    }catch(error){lastError=error;}
   }
-  if(!json)throw lastError||Error('Both instruction sources are unavailable');
+  if(!json)throw lastError||Error('All instruction sources are unavailable');
   if(!Array.isArray(json.sections)||json.sections.length!==sections.length)throw Error('Section count changed; verification needed');
   if(sections.some((s,i)=>json.sections[i].steps?.length!==s.sourceStepCount))throw Error('Source section count changed; saved step IDs protected');
   sourceSections=json.sections;sourceStatus='Instructions loaded';render();
