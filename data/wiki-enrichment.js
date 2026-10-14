@@ -16,24 +16,6 @@ export const wikiEnrichment = {
         "id": "wiki-extra-0002",
         "text": "Complete Tai Bwo Wannai Trio"
       }
-    ],
-    "b0-236-step-001": [
-      {
-        "id": "wiki-extra-0003",
-        "text": "Theatre of Blood"
-      },
-      {
-        "id": "wiki-extra-0004",
-        "text": "Rapier -> TOA"
-      },
-      {
-        "id": "wiki-extra-0005",
-        "text": "Sang -> CoX until Prayer Scrolls"
-      },
-      {
-        "id": "wiki-extra-0006",
-        "text": "Scythe -> Oathplate from Yama via While Guthix Sleeps"
-      }
     ]
   },
   "notes": {
@@ -593,5 +575,25 @@ export const wikiEnrichment = {
     "b0-109-step-001": "Withdraw: 10 coins, Ardy Cloak, Dramen Staff, Steel warhammer, Steel Longsword, 2x Steel Swords, Steel Mace, Steel Dagger, 6x Planks, Holy Sickle (b), Druidic Pouch, Some food, Seed Dibber, Mushroom spore, Rake, teleport out",
     "b0-126-step-013": "Talk to Smokin' Joe & continue Ratcatchers until needing to go to Port Sarim[Ratcatchers]",
     "b0-139-step-004": "Continue Tai Bwo Wannai Trio until you head to Cairn Isle"
+  },
+  "afterLast": {
+    "b0-236": [
+      {
+        "id": "wiki-extra-0003",
+        "text": "Theatre of Blood"
+      },
+      {
+        "id": "wiki-extra-0004",
+        "text": "Rapier -> TOA"
+      },
+      {
+        "id": "wiki-extra-0005",
+        "text": "Sang -> CoX until Prayer Scrolls"
+      },
+      {
+        "id": "wiki-extra-0006",
+        "text": "Scythe -> Oathplate from Yama via While Guthix Sleeps"
+      }
+    ]
   }
 };
