@@ -1,5 +1,6 @@
 import {sections, episodes, sourceUrl, sourceRevision} from './data/b0aty-index.js';
 import {notes} from './data/b0aty-notes.js';
+import {wikiEnrichment} from './data/wiki-enrichment.js';
 // Full Wiki-derived section text is fetched from a revision-pinned, third-party CC BY-NC-SA mirror.
 // It is not bundled or republished in this repository.
 const guideDataUrls=[
@@ -20,15 +21,19 @@ const userKey=id=>'rhr-b0aty-user-'+id+'-v1';
 const pendingKey=id=>'rhr-b0aty-pending-'+id+'-v1';
 const selectionKey='rhr-b0aty-selection-v1';
 const stepID=(s,i)=>s.id+'-step-'+String(i+1).padStart(3,'0');
-const allIDs=new Set(sections.flatMap(s=>[s.id,...Array.from({length:s.sourceStepCount},(_,i)=>stepID(s,i)),...(notes[s.id]?.steps||[]).map(n=>s.id+'-'+n[0])]));
+const extrasBefore=id=>wikiEnrichment.inserts[id]||[];
+const idsForBank=s=>[...Array.from({length:s.sourceStepCount},(_,i)=>stepID(s,i)).flatMap(id=>[...extrasBefore(id).map(x=>x.id),id]),...(wikiEnrichment.afterLast?.[s.id]||[]).map(x=>x.id)];
+const allIDs=new Set(sections.flatMap(s=>[s.id,...idsForBank(s),...(notes[s.id]?.steps||[]).map(n=>s.id+'-'+n[0])]));
 const stepsFor=s=>sourceSections?.[s.section-1]?.steps||[];
-const sourceCount=()=>sections.reduce((n,s)=>n+s.sourceStepCount,0);
-const sourceCompleted=()=>sections.reduce((n,s)=>n+Array.from({length:s.sourceStepCount},(_,i)=>completed.has(stepID(s,i))?1:0).reduce((a,b)=>a+b,0),0);
-let sourceSections=null,sourceStatus='Loading complete B0aty instructions…',wikiExpanded=true;
+const sourceCount=()=>sections.reduce((n,s)=>n+idsForBank(s).length,0);
+const sourceCompleted=()=>sections.reduce((n,s)=>n+idsForBank(s).filter(id=>completed.has(id)).length,0);
+let sourceSections=null,sourceStatus='Loading the complete route…',wikiExpanded=true;
+const resourceOpen=new Set();
 
-const bankDone=()=>sections.filter(s=>completed.has(s.id)).length;
+const bankCompleted=s=>idsForBank(s).every(id=>completed.has(id));
+const bankDone=()=>sections.filter(bankCompleted).length;
 const stepDone=s=>notes[s.id]?.steps.filter(n=>completed.has(s.id+'-'+n[0])).length||0;
-const firstPending=()=>sections.findIndex(s=>!completed.has(s.id));
+const firstPending=()=>sections.findIndex(s=>!bankCompleted(s));
 const sectionHash=()=>{const m=location.hash.match(/^#\/bank\/(\d+)$/);return m?Math.min(sections.length-1,Math.max(0,Number(m[1]))):null};
 let current=sectionHash()??load(selectionKey,5);
 if(!Number.isInteger(current)||current<0||current>=sections.length)current=0;
@@ -40,6 +45,11 @@ const syncKey=()=>pendingKey(session.user.id);
 const writeLocal=()=>save(key(),[...completed]);
 const sourceAnchor=s=>sourceUrl+(s.title.toLowerCase().startsWith('bank ')?'#'+encodeURIComponent(s.title.replace(/ /g,'_')):'');
 const currentSection=()=>sections[current];
+const sectionTitle=s=>{
+ if(s.title==='Starting Out'||/^Bank \d+[A-Z]?$/i.test(s.title))return s.title;
+ const index=sections.indexOf(s),prev=sections.slice(0,index).reverse().find(v=>/^Bank \d+[A-Z]?$/i.test(v.title));
+ return prev?prev.title+' · continued':s.title;
+};
 function announce(t){message=t;render();}
 function routeTo(i){
  current=Math.max(0,Math.min(sections.length-1,i));
@@ -47,40 +57,70 @@ function routeTo(i){
  if(location.hash!=='#/bank/'+current){location.hash='#/bank/'+current;}else render();
 }
 function sourceLink(s,label){
- return '<a target="_blank" rel="noopener noreferrer" href="'+escapeHTML(sourceAnchor(s))+'">'+(label||'Read B0aty’s full instructions')+' ↗</a>';
+ return '<a target="_blank" rel="noopener noreferrer" href="'+escapeHTML(sourceAnchor(s))+'">'+(label||'Read the OSRS Wiki guide')+' ↗</a>';
 }
 function sidebarHTML(){
  const grouped=episodes.map((ep,i)=>{
   const list=sections.map((s,j)=>({...s,sectionIndex:j})).filter(s=>s.episode===ep);
-  const done=list.filter(s=>completed.has(s.id)).length;
+  const done=list.filter(s=>bankCompleted(s)).length;
   const active=list.some(s=>s.sectionIndex===current);
   return '<div class="episode '+(active?'open':'')+'"><button class="episode-head" data-episode="'+i+'"><span>EP '+(i+1)+'</span><strong>'+escapeHTML(ep.replace(/^Episode \d+ ?[-–]? ?/,''))+'</strong><small>'+done+'/'+list.length+'</small></button><div class="banks">'+list.map(s=>{
    let selected=s.sectionIndex===current;
-   return '<button class="bank-link '+(selected?'selected':'')+'" data-bank="'+s.sectionIndex+'"><span class="bank-dot '+(completed.has(s.id)?'done':'')+'">'+(completed.has(s.id)?'✓':String(s.sectionIndex+1).padStart(2,'0'))+'</span><span>'+escapeHTML(s.title)+'</span></button>';
+   return '<button class="bank-link '+(selected?'selected':'')+'" data-bank="'+s.sectionIndex+'"><span class="bank-dot '+(bankCompleted(s)?'done':'')+'">'+(bankCompleted(s)?'✓':String(s.sectionIndex+1).padStart(2,'0'))+'</span><span>'+escapeHTML(sectionTitle(s))+'</span></button>';
   }).join('')+'</div></div>';
  }).join('');
- return '<aside class="sidebar"><a class="brand" href="#/bank/0"><span class="brand-emblem">♜</span><span><strong>RED HELM ROAD</strong><small>B0ATY HCIM V3 TRACKER</small></span></a><div class="sidebar-top">THE FULL ROUTE <small>'+bankDone()+' / '+sections.length+' banks</small></div>'+grouped+'<div class="sidebar-bottom"><a href="./original.html">Previous guide archive ↗</a><a target="_blank" rel="noopener noreferrer" href="'+sourceUrl+'">Original OSRS Wiki guide ↗</a></div></aside>';
+ return '<aside class="sidebar"><a class="brand" href="#/bank/0"><span class="brand-emblem">♜</span><span><strong>RED HELM ROAD</strong><small>HCIM ROUTE TRACKER</small></span></a><div class="sidebar-top">THE FULL ROUTE <small>'+bankDone()+' / '+sections.length+' banks</small></div>'+grouped+'<div class="sidebar-bottom"><a href="./original.html">Previous guide archive ↗</a><a target="_blank" rel="noopener noreferrer" href="'+sourceUrl+'">Original OSRS Wiki guide ↗</a></div></aside>';
+}
+function stepTextLabel(text){
+ const clean=String(text).replace(/https?:\/\/[^\s<>"']+/g,'').replace(/\s*[-–]\s*(?:Safespot guide|Video guide)[^\n]*$/i,'').trim();
+ return clean||String(text);
+}
+function urlsIn(text){
+ return [...String(text).matchAll(/https?:\/\/[^\s<>"']+/g)].map(m=>m[0].replace(/[),.;]+$/,'')).filter(x=>/^https?:\/\//i.test(x));
+}
+function videoEmbed(url){
+ try{
+  const u=new URL(url),host=u.hostname.toLowerCase();let id='';
+  if(host==='youtu.be'||host==='www.youtu.be')id=u.pathname.split('/')[1];
+  else if(['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'].includes(host))id=u.searchParams.get('v')||(u.pathname.startsWith('/embed/')?u.pathname.split('/')[2]:'');
+  if(!/^[A-Za-z0-9_-]{11}$/.test(id))return '';
+  const rawTime=u.searchParams.get('t')||u.searchParams.get('start')||'0';
+  const seconds=/^\d+$/.test(rawTime)?Number(rawTime):(/^\d+m\d+s$/.test(rawTime)?Number(rawTime.split('m')[0])*60+Number(rawTime.split('m')[1].replace('s','')):0);
+  return '<div class="step-video"><iframe loading="lazy" title="Video guide" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen src="https://www.youtube-nocookie.com/embed/'+id+'?start='+Math.max(0,seconds)+'"></iframe></div>';
+ }catch{return ''}
+}
+function resourceHTML(step){
+ const added=wikiEnrichment.notes[step.id]||[],imgs=wikiEnrichment.images[step.id]||[];
+ const links=[...new Set([step.text,...added].flatMap(urlsIn))];
+ if(!added.length&&!imgs.length&&!links.length)return '';
+ const descriptions=added.map(t=>'<p>'+escapeHTML(t.replace(/https?:\/\/[^\s<>"']+/g,'').trim())+'</p>').join('');
+ const urls=links.map(url=>'<a href="'+escapeHTML(url)+'" target="_blank" rel="noopener noreferrer">Open linked guide ↗</a>'+videoEmbed(url)).join('');
+ const images=imgs.map(file=>'<a target="_blank" rel="noopener noreferrer" href="https://jbbuckler.github.io/B0aty-HCIM-Guide-/assets/'+encodeURIComponent(file)+'"><img loading="lazy" alt="Guide reference image" src="https://jbbuckler.github.io/B0aty-HCIM-Guide-/assets/'+encodeURIComponent(file)+'"></a>').join('');
+ return '<details class="step-resources" data-resource-id="'+escapeHTML(step.id)+'" '+(resourceOpen.has(step.id)?'open':'')+'><summary>Wiki notes, images & videos <span aria-hidden="true">▾</span></summary><div class="step-resource-content">'+descriptions+urls+images+'</div></details>';
 }
 function wikiHTML(s){
- const list=stepsFor(s);
- const loading=!sourceSections;
- const note=!loading && s.sourceStepCount!==list.length;
- const count=Array.from({length:s.sourceStepCount},(_,i)=>completed.has(stepID(s,i))?1:0).reduce((a,b)=>a+b,0);
- let items='';
- if(loading)items='<div class="source-only"><p>'+escapeHTML(sourceStatus)+'</p><button class="primary" data-action="reload-source">Retry loading instructions</button></div>';
- else if(note)items='<div class="risk-note">The linked source changed. This section is not shown until its instruction counts are checked, to avoid mixing up saved ticks.</div>';
- else items='<div class="wiki-steps">'+list.map((st,i)=>{
-   const id=stepID(s,i),done=completed.has(id);
-   const danger=/stronghold of security|taverley dungeon|wilderness|wintertodt|aggressive|catablepon|spider max|if you take .*damage|boss|zulrah|demon|fighting|kill a bear|raid|inferno|revenant|cerberus/i.test(st.text);
-   return '<button type="button" aria-pressed="'+done+'" class="wiki-step '+(done?'done':'')+'" data-toggle="'+id+'"><span class="check" aria-hidden="true">'+(done?'✓':'')+'</span><span class="wiki-step-body"><span class="wiki-step-number">'+String(i+1).padStart(2,'0')+(danger?' · ⚠ FOCUSED PLAY':'')+'</span><span class="wiki-step-text">'+escapeHTML(st.text)+'</span></span></button>';
- }).join('')+'</div>';
- return '<details id="wiki-notes" class="wiki-collapsible" '+(wikiExpanded?'open':'')+'>'+
- '<summary><span><strong>All B0aty Wiki steps & notes</strong><small>'+count+' / '+s.sourceStepCount+' ticked · Expand or collapse · Tap each step to save progress</small></span><span class="chevron">▾</span></summary>'+
- '<div class="wiki-body">'+items+'<div class="wiki-credit">Instructions from a snapshot of <a href="'+sourceUrl+'" target="_blank" rel="noopener noreferrer">B0aty HCIM Guide V3 on the OSRS Wiki</a>, as a locally hosted CC-licensed dataset adapted from a structured community mirror. Wiki content © contributors, <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>. Original guide maintained separately. Other live Wiki formatting, images and links may differ.</div></div>'+
- '</details>';
+ const list=stepsFor(s),loading=!sourceSections,inconsistent=!loading&&s.sourceStepCount!==list.length;
+ const items=idsForBank(s),count=items.filter(id=>completed.has(id)).length;
+ let body='';
+ if(loading)body='<div class="source-only"><p>'+escapeHTML(sourceStatus)+'</p><button class="primary" data-action="reload-source">Retry loading instructions</button></div>';
+ else if(inconsistent)body='<div class="risk-note">The route source changed. Its step counts need checking before displaying it, so saved ticks never attach to the wrong task.</div>';
+ else {
+  let number=0;
+  const rows=list.flatMap((st,i)=>{
+   const id=stepID(s,i);
+   return [...extrasBefore(id).map(x=>({id:x.id,text:x.text})),{id,text:wikiEnrichment.overrides[id]||st.text}];
+  }).concat((wikiEnrichment.afterLast?.[s.id]||[]).map(x=>({id:x.id,text:x.text})));
+  body='<div class="wiki-steps">'+rows.map(st=>{
+   const done=completed.has(st.id),danger=/stronghold of security|taverley dungeon|wilderness|wintertodt|aggressive|catablepon|spider max|if you take .*damage|boss|zulrah|demon|fighting|kill a bear|raid|inferno|warlord|witches house/i.test(st.text);
+   const label=stepTextLabel(st.text);
+   return '<div class="wiki-step '+(done?'done':'')+'"><button type="button" class="wiki-step-check" aria-label="'+(done?'Untick ':'Tick ')+escapeHTML(label)+'" aria-pressed="'+done+'" data-toggle="'+escapeHTML(st.id)+'"><span class="check" aria-hidden="true">'+(done?'✓':'')+'</span></button><div class="wiki-step-body"><span class="wiki-step-number">'+String(++number).padStart(2,'0')+(danger?' · ⚠ FOCUSED PLAY':'')+'</span><span class="wiki-step-text '+(done?'step-done':'')+'">'+escapeHTML(label)+'</span>'+resourceHTML(st)+'</div></div>';
+  }).join('')+'</div>';
+ }
+ return '<details id="wiki-notes" class="wiki-collapsible" '+(wikiExpanded?'open':'')+'><summary><span><strong>Complete route checklist</strong><small>'+count+' / '+items.length+' steps ticked · Tap the square to complete a step</small></span><span class="chevron">▾</span></summary><div class="wiki-body">'+body+'<div class="wiki-credit">Source: <a href="'+escapeHTML(sourceUrl)+'" target="_blank" rel="noopener noreferrer">OSRS Wiki HCIM route</a> and its contributors. Additional reference images from a community adaptation. Wiki-derived text is attributed under <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>. This is a snapshot and may differ from the latest Wiki changes.</div></div></details>';
 }
+
 async function loadWikiData(){
- sourceStatus='Loading complete B0aty instructions…';render();
+ sourceStatus='Loading the complete route…';render();
  try{
   let json=null,lastError=null;
   for(const url of guideDataUrls){
@@ -97,33 +137,22 @@ async function loadWikiData(){
   sourceSections=json.sections;sourceStatus='Instructions loaded';render();
  }catch(error){sourceStatus='Could not load the mirrored Wiki instructions: '+error.message+'. You can retry without losing existing progress.';render();}
 }
-function notesHTML(s){
- const note=notes[s.id];
- if(!note)return '<div class="source-only"><h3>Follow the source instructions</h3><p>This section has '+s.sourceStepCount+' steps in B0aty V3. Follow the Wiki’s exact banking, quest and item sequence, then mark this bank complete here.</p>'+sourceLink(s,'Open full source checklist')+'</div>';
- let completedNotes=stepDone(s);
- return '<div class="note-intro"><div><small>ORIGINAL HCIM NOTES</small><h3>Preparation & safety checkpoints</h3><p>'+escapeHTML(note.summary)+'</p></div><span>'+completedNotes+'/'+note.steps.length+'</span></div>'+
- (note.caution?'<div class="risk-note"><strong>⚠ Hardcore precaution</strong><p>'+escapeHTML(note.caution)+'</p></div>':'')+
- '<div class="notes">'+note.steps.map((n,i)=>{
- const id=s.id+'-'+n[0],done=completed.has(id);
- return '<button class="note-step '+(done?'done':'')+'" data-toggle="'+escapeHTML(id)+'"><span class="check">'+(done?'✓':'')+'</span><span class="note-label"><strong>'+escapeHTML(n[1])+'</strong><small>'+escapeHTML(n[2])+'</small></span></button>';
- }).join('')+'</div><div class="source-only subtle"><strong>The Wiki has '+s.sourceStepCount+' specific instructions for this section.</strong><p>These are extra condensed notes, not a replacement for the complete B0aty route. Check the Wiki for the precise inventory and order.</p>'+sourceLink(s,'Open exact B0aty V3 steps')+'</div>';
-}
 function viewHTML(){
  const s=currentSection(),i=current;
  const count=bankDone(),rate=(count/sections.length*100).toFixed(1);
- const list=sections.map((s,j)=>({s,j})).filter(x=>!onlyRemaining||!completed.has(x.s.id));
+ const list=sections.map((s,j)=>({s,j})).filter(x=>!onlyRemaining||!bankCompleted(x.s));
  const stepCount=sourceCount(),stepCountDone=sourceCompleted();
  const progress='<div class="progress-bar"><div style="width:'+rate+'%"></div></div>';
  const options=episodes.map(ep=>'<optgroup label="'+escapeHTML(ep)+'">'+list.filter(x=>x.s.episode===ep).map(x=>'<option value="'+x.j+'" '+(x.j===current?'selected':'')+'>'+escapeHTML(x.s.title)+' · #'+(x.j+1)+'</option>').join('')+'</optgroup>').join('');
- return '<div class="topbar"><button class="menu" data-action="menu" aria-label="Toggle chapter menu">☰</button><div class="brand-mini">RED HELM ROAD <span>· B0ATY HCIM V3</span></div><button class="cloud" data-action="account">'+(session?'☁ '+escapeHTML(syncStatus):'◯ '+(supabase?'Sign in to save':'Offline save'))+'</button></div>'+
- '<div class="intro"><div class="eyebrow">CADVYN · HARDCORE IRONMAN</div><h1>Follow the route. <span>Keep the helm.</span></h1><p>Follow B0aty HCIM V3 here: every step has its own tickbox, and the full Wiki-derived notes live in a collapsible section. Additional HCIM warnings help you decide when to stop for work.</p>'+
+ return '<div class="topbar"><button class="menu" data-action="menu" aria-label="Toggle chapter menu">☰</button><div class="brand-mini">RED HELM ROAD <span>· HCIM GUIDE</span></div><button class="cloud" data-action="account">'+(session?'☁ '+escapeHTML(syncStatus):'◯ '+(supabase?'Sign in to save':'Offline save'))+'</button></div>'+
+ '<div class="intro"><div class="eyebrow">CADVYN · HARDCORE IRONMAN</div><h1>Follow the route. <span>Keep the helm.</span></h1><p>Follow the route step by step. Every task is independently tickable, with the Wiki’s notes, screenshots and videos behind compact dropdowns. Progress saves as you go.</p>'+
  '<div class="metrics"><div><b>'+count+' <small>/ '+sections.length+'</small></b><label>Banks completed</label></div><div><b>'+stepCountDone+' <small>/ '+stepCount+'</small></b><label>Individual steps ticked</label></div><div><b>'+episodes.length+'</b><label>Episodes indexed</label></div></div>'+progress+'</div>'+
  '<div class="notice">🛡️ <span><b>HCIM first:</b> Save risky quests, Stronghold trips, Wintertodt and PvM for uninterrupted periods. This adaptation tracks the Wiki; never treat a risk badge as a complete safety assessment.</span></div>'+
  '<div class="jump"><label for="bank-select">Jump to a bank / section</label><select id="bank-select">'+options+'</select><label class="hide"><input id="hide-completed" type="checkbox" '+(onlyRemaining?'checked':'')+'> Hide completed</label></div>'+
- '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(s.title)+'</h2><p><strong>'+s.sourceStepCount+' individually tickable instructions</strong> are inside the expandable section below. Check each one as you complete it — no need to leave this site.</p>'+
+ '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(sectionTitle(s))+'</h2><p><strong>'+idsForBank(s).length+' individually tickable instructions</strong> appear below, with supplementary Wiki resources collapsed underneath each relevant step.</p>'+
  '<div class="video-links">'+sourceLink(s,'Original OSRS Wiki steps')+(s.youtubeId?' <a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+encodeURIComponent(s.youtubeId)+'">Episode video ↗</a>':'')+'</div></div>'+
- wikiHTML(s)+notesHTML(s)+
- '<div class="complete-panel '+(completed.has(s.id)?'finished':'')+'"><div><h3>'+(completed.has(s.id)?'Bank completed':'Finished every step in this bank?')+'</h3><p>'+(completed.has(s.id)?'Bank and steps are complete.':'Tick the steps individually above, or use this shortcut to mark them all complete.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(completed.has(s.id)?'✓ Completed · Undo':'Mark all steps complete ✓')+'</button></div>'+
+ wikiHTML(s)+
+ '<div class="complete-panel '+(bankCompleted(s)?'finished':'')+'"><div><h3>'+(bankCompleted(s)?'Section completed':'Finished every step in this section?')+'</h3><p>'+(bankCompleted(s)?'All instructions in this section are complete.':'Tick the steps individually above, or use this shortcut to mark them all complete.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(bankCompleted(s)?'✓ Completed · Undo':'Mark all steps complete ✓')+'</button></div>'+
  '<div class="pager"><button data-bank="'+(i-1)+'" '+(i<=0?'disabled':'')+'>← Previous</button><button data-action="resume">Next unfinished</button><button data-bank="'+(i+1)+'" '+(i>=sections.length-1?'disabled':'')+'>Next →</button></div>'+
  '<div class="bottom-links"><a href="./original.html">View previous 99 Firemaking route</a><span>Source index: '+escapeHTML(sourceRevision)+' · Unofficial fan project, no affiliation with Jagex</span></div>';
 }
@@ -141,17 +170,17 @@ function render(){
 }
 function toggle(id){
  if(!allIDs.has(id))return;
- const state=!completed.has(id);
- const update=(key,value)=>{value?completed.add(key):completed.delete(key);if(session)queued[key]=value;};
  const bank=sections.find(s=>s.id===id);
+ const state=bank?!bankCompleted(bank):!completed.has(id);
+ const update=(key,value)=>{value?completed.add(key):completed.delete(key);if(session)queued[key]=value;};
  if(bank){
   update(id,state);
-  for(let i=0;i<bank.sourceStepCount;i++)update(stepID(bank,i),state);
+  for(const step of idsForBank(bank))update(step,state);
  }else{
   update(id,state);
-  const owner=sections.find(s=>id.startsWith(s.id+'-step-'));
+  const owner=sections.find(s=>idsForBank(s).includes(id));
   if(owner){
-   const allDone=Array.from({length:owner.sourceStepCount},(_,i)=>stepID(owner,i)).every(x=>completed.has(x));
+   const allDone=bankCompleted(owner);
    update(owner.id,allDone);
   }
  }
@@ -205,9 +234,9 @@ async function startAuth(){
  }catch(e){syncStatus='Sign-in unavailable';render();}
 }
 function backup(){
- const obj={guide:'B0aty HCIM V3 route',version:1,completed:[...completed],exportedAt:new Date().toISOString()};
+ const obj={guide:'HCIM route',version:1,completed:[...completed],exportedAt:new Date().toISOString()};
  const url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));
- const a=document.createElement('a');a.href=url;a.download='cadvyn-hcim-b0aty-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const a=document.createElement('a');a.href=url;a.download='red-helm-road-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function merge(ids){
  let n=0;for(const id of ids){if(!allIDs.has(id)||completed.has(id))continue;completed.add(id);n++;if(session)queued[id]=true;}
@@ -233,7 +262,7 @@ document.addEventListener('click',async e=>{
   if(a==='reload-source')void loadWikiData();
  }catch(err){announce('Action failed: '+err.message);}
 });
-document.addEventListener('toggle',e=>{if(e.target.id==='wiki-notes')wikiExpanded=e.target.open;},true);
+document.addEventListener('toggle',e=>{if(e.target.id==='wiki-notes')wikiExpanded=e.target.open;const id=e.target.dataset?.resourceId;if(id){e.target.open?resourceOpen.add(id):resourceOpen.delete(id);}},true);
 document.addEventListener('change',async e=>{
  if(e.target.id==='bank-select'){routeTo(Number(e.target.value));return;}
  if(e.target.id==='hide-completed'){onlyRemaining=e.target.checked;render();return;}

@@ -9,11 +9,11 @@ Personal, unofficial Old School RuneScape **Hardcore Ironman** guide and progres
 ## What the current website does
 
 - **Follows B0aty's V3 route order**, indexing **15 episodes / 236 banks and other route sections**, based on source metadata from 13 March 2026.
-- Browse banks and episodes, open directly at Bank 5 for new visitors, and tick every individual source instruction. Completion persists per step and per bank.
-- The **All B0aty Wiki steps & notes** disclosure opens inside the guide. It loads the full text of the 2,910 steps from a first-party snapshot stored in this repository; no need to switch tabs while following the route.
+- Browse banks and episodes, open directly at Bank 5 for new visitors, and tick each source instruction independently. Supplementary instructions use new IDs; the existing 2,910 IDs and synced progress are unchanged.
+- The **Complete route checklist** contains the local 2,910-step source snapshot plus 6 independently tickable companion lines. Contextual notes, safespot videos, and images use a separate disclosure attached to the appropriate step, collapsed by default so mobile pages remain short.
 - A full-bank button marks all contained step IDs as complete (and can undo them).
-- Provides **original additional HCIM safety and preparation notes for the opening banks**.
-- The complete **text instructions and inline notes** are served directly by this GitHub Pages site from `data/b0aty-guide.json`, a 13 March 2026 snapshot of the OSRS Wiki guide sourced through a [structured community mirror](https://github.com/nandobrazil/hcim-guide-plugin). The source stays linked for authorship, licence and updates. Formatting, embedded images, links and newer wiki edits may differ, so the original Wiki remains linked for attribution and updates.
+- Removes the separate condensed **Original HCIM Notes** panel from the current UI to avoid duplicate, conflicting checklists. Older note IDs remain recognised so previously saved data is not lost.
+- The **text instructions** come from `data/b0aty-guide.json`, a 13 March 2026 snapshot of the OSRS Wiki guide sourced through a [structured community mirror](https://github.com/nandobrazil/hcim-guide-plugin). `data/wiki-enrichment.js` adds 6 previously missing action lines, 11 companion note lines, 8 wording corrections, and references to 173 images from the [community companion version](https://github.com/Jbbuckler/B0aty-HCIM-Guide-). Images remain hosted externally and may not always load. **Neither source is a verified live replica of the Wiki**; formatting, additional embedded objects and newer edits may differ.
 - The browser loads the locally hosted guide first, and tries two pinned external mirrors only if that request fails. **Progress saves independently of the source loading.**
 - Save bank ticks and note ticks in Supabase when signed in, using a personal email magic link. Both tables have row-level security.
 - Download/import a JSON progress backup.
@@ -29,6 +29,15 @@ This app is an independently written tracker *for* the B0aty route, not an endor
 - B0aty's efficiency route may assume you are actively playing and able to react immediately. This app adds safety guidance, but not a risk audit of every one of the source guide's nearly 3,000 instructions.
 - Wintertodt **zero warmth is an unsafe death**; do not leave the minigame unattended on an HCIM.
 - B0aty's route unlocks **Herblore around Banks 10–11**, before its much later Wintertodt stages.
+
+
+## Route fidelity and testing (October 2026)
+
+- Compared all 2,910 primary instructions with 2,927 companion text lines (excluding headings, reset markers and images). Existing step IDs remain fixed. Six new supplementary actions are individually tickable, while non-action resource lines appear in step dropdowns.
+- Four endgame lines are appended in sequence rather than placed before the last primary step.
+- Screenshots are linked from the companion site, under collapsible step details. Resource panels also embed known YouTube URLs only when those links are supplied, and provide an external link as a fallback.
+- Saved checkboxes retain their existing guest and Supabase keys. A bank is considered complete only when all of its source and added steps are ticked.
+- This is an offline snapshot parity pass, **not a live audit of every revision or media element on the current OSRS Wiki**. Check the linked Wiki when source material appears inconsistent.
 
 ## Cloud setup
 
@@ -55,7 +64,8 @@ The tables `step_progress` and `hcim_profiles` are already present in this separ
 - `index.html` / `boaty-styles.css` / `boaty-app.js`: Current B0aty route tracker.
 - `data/b0aty-index.js`: Route metadata (15 episodes, 236 sections, 2,910 original steps, source credit).
 - `data/b0aty-guide.json`: Full source instructions, hosted locally and subject to the CC BY-NC-SA 3.0 terms recorded in `data/ATTRIBUTION.md`.
-- `data/b0aty-notes.js`: Original, extra HCIM advice and condensed checkpoints for initial sections.
+- `data/wiki-enrichment.js`: Additional actions, notes, corrected wording and source image references without renumbering saved steps.
+- `data/b0aty-notes.js`: Legacy condensed notes, no longer displayed in the main checklist; IDs kept for cloud progress compatibility.
 - `original.html` / `app.js` / `data/chapters.js` / `styles.css`: Original custom Firemaking route, retained intact for rollback and old progress.
 - `config.js`: Publishable browser Supabase credentials only.
 - `supabase/schema.sql`: Schema reference for the *HCIM Guide* project only.
