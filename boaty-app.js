@@ -22,7 +22,7 @@ const pendingKey=id=>'rhr-b0aty-pending-'+id+'-v1';
 const selectionKey='rhr-b0aty-selection-v1';
 const stepID=(s,i)=>s.id+'-step-'+String(i+1).padStart(3,'0');
 const extrasBefore=id=>wikiEnrichment.inserts[id]||[];
-const idsForBank=s=>Array.from({length:s.sourceStepCount},(_,i)=>stepID(s,i)).flatMap(id=>[...extrasBefore(id).map(x=>x.id),id]);
+const idsForBank=s=>[...Array.from({length:s.sourceStepCount},(_,i)=>stepID(s,i)).flatMap(id=>[...extrasBefore(id).map(x=>x.id),id]),...(wikiEnrichment.afterLast?.[s.id]||[]).map(x=>x.id)];
 const allIDs=new Set(sections.flatMap(s=>[s.id,...idsForBank(s),...(notes[s.id]?.steps||[]).map(n=>s.id+'-'+n[0])]));
 const stepsFor=s=>sourceSections?.[s.section-1]?.steps||[];
 const sourceCount=()=>sections.reduce((n,s)=>n+idsForBank(s).length,0);
@@ -45,6 +45,11 @@ const syncKey=()=>pendingKey(session.user.id);
 const writeLocal=()=>save(key(),[...completed]);
 const sourceAnchor=s=>sourceUrl+(s.title.toLowerCase().startsWith('bank ')?'#'+encodeURIComponent(s.title.replace(/ /g,'_')):'');
 const currentSection=()=>sections[current];
+const sectionTitle=s=>{
+ if(s.title==='Starting Out'||/^Bank \d+[A-Z]?$/i.test(s.title))return s.title;
+ const index=sections.indexOf(s),prev=sections.slice(0,index).reverse().find(v=>/^Bank \d+[A-Z]?$/i.test(v.title));
+ return prev?prev.title+' · continued':s.title;
+};
 function announce(t){message=t;render();}
 function routeTo(i){
  current=Math.max(0,Math.min(sections.length-1,i));
@@ -61,7 +66,7 @@ function sidebarHTML(){
   const active=list.some(s=>s.sectionIndex===current);
   return '<div class="episode '+(active?'open':'')+'"><button class="episode-head" data-episode="'+i+'"><span>EP '+(i+1)+'</span><strong>'+escapeHTML(ep.replace(/^Episode \d+ ?[-–]? ?/,''))+'</strong><small>'+done+'/'+list.length+'</small></button><div class="banks">'+list.map(s=>{
    let selected=s.sectionIndex===current;
-   return '<button class="bank-link '+(selected?'selected':'')+'" data-bank="'+s.sectionIndex+'"><span class="bank-dot '+(bankCompleted(s)?'done':'')+'">'+(bankCompleted(s)?'✓':String(s.sectionIndex+1).padStart(2,'0'))+'</span><span>'+escapeHTML(s.title)+'</span></button>';
+   return '<button class="bank-link '+(selected?'selected':'')+'" data-bank="'+s.sectionIndex+'"><span class="bank-dot '+(bankCompleted(s)?'done':'')+'">'+(bankCompleted(s)?'✓':String(s.sectionIndex+1).padStart(2,'0'))+'</span><span>'+escapeHTML(sectionTitle(s))+'</span></button>';
   }).join('')+'</div></div>';
  }).join('');
  return '<aside class="sidebar"><a class="brand" href="#/bank/0"><span class="brand-emblem">♜</span><span><strong>RED HELM ROAD</strong><small>HCIM ROUTE TRACKER</small></span></a><div class="sidebar-top">THE FULL ROUTE <small>'+bankDone()+' / '+sections.length+' banks</small></div>'+grouped+'<div class="sidebar-bottom"><a href="./original.html">Previous guide archive ↗</a><a target="_blank" rel="noopener noreferrer" href="'+sourceUrl+'">Original OSRS Wiki guide ↗</a></div></aside>';
@@ -104,7 +109,7 @@ function wikiHTML(s){
   const rows=list.flatMap((st,i)=>{
    const id=stepID(s,i);
    return [...extrasBefore(id).map(x=>({id:x.id,text:x.text})),{id,text:wikiEnrichment.overrides[id]||st.text}];
-  });
+  }).concat((wikiEnrichment.afterLast?.[s.id]||[]).map(x=>({id:x.id,text:x.text})));
   body='<div class="wiki-steps">'+rows.map(st=>{
    const done=completed.has(st.id),danger=/stronghold of security|taverley dungeon|wilderness|wintertodt|aggressive|catablepon|spider max|if you take .*damage|boss|zulrah|demon|fighting|kill a bear|raid|inferno|warlord|witches house/i.test(st.text);
    const label=stepTextLabel(st.text);
@@ -144,7 +149,7 @@ function viewHTML(){
  '<div class="metrics"><div><b>'+count+' <small>/ '+sections.length+'</small></b><label>Banks completed</label></div><div><b>'+stepCountDone+' <small>/ '+stepCount+'</small></b><label>Individual steps ticked</label></div><div><b>'+episodes.length+'</b><label>Episodes indexed</label></div></div>'+progress+'</div>'+
  '<div class="notice">🛡️ <span><b>HCIM first:</b> Save risky quests, Stronghold trips, Wintertodt and PvM for uninterrupted periods. This adaptation tracks the Wiki; never treat a risk badge as a complete safety assessment.</span></div>'+
  '<div class="jump"><label for="bank-select">Jump to a bank / section</label><select id="bank-select">'+options+'</select><label class="hide"><input id="hide-completed" type="checkbox" '+(onlyRemaining?'checked':'')+'> Hide completed</label></div>'+
- '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(s.title)+'</h2><p><strong>'+idsForBank(s).length+' individually tickable instructions</strong> appear below, with supplementary Wiki resources collapsed underneath each relevant step.</p>'+
+ '<div class="chapter"><div class="chapter-top"><span>'+escapeHTML(s.episode)+' · '+(i+1)+' of '+sections.length+'</span><span>'+(s.requiresAttention?'⚠ Attention required':'Route checkpoint')+'</span></div><h2>'+escapeHTML(sectionTitle(s))+'</h2><p><strong>'+idsForBank(s).length+' individually tickable instructions</strong> appear below, with supplementary Wiki resources collapsed underneath each relevant step.</p>'+
  '<div class="video-links">'+sourceLink(s,'Original OSRS Wiki steps')+(s.youtubeId?' <a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v='+encodeURIComponent(s.youtubeId)+'">Episode video ↗</a>':'')+'</div></div>'+
  wikiHTML(s)+
  '<div class="complete-panel '+(bankCompleted(s)?'finished':'')+'"><div><h3>'+(bankCompleted(s)?'Section completed':'Finished every step in this section?')+'</h3><p>'+(bankCompleted(s)?'All instructions in this section are complete.':'Tick the steps individually above, or use this shortcut to mark them all complete.')+'</p></div><button data-toggle="'+s.id+'" class="primary">'+(bankCompleted(s)?'✓ Completed · Undo':'Mark all steps complete ✓')+'</button></div>'+
