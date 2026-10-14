@@ -1,47 +1,63 @@
-# Red Helm Road — Hardcore Ironman Progression
+# Red Helm Road — B0aty HCIM V3 Tracker
 
-A mobile-friendly, unofficial OSRS **Hardcore Ironman** maxing route, designed for somebody playing mostly while working from home. It follows the continuous, numbered efficiency-guide style without copying the Oziris guide. **Safety before speed.**
+Personal, unofficial Old School RuneScape **Hardcore Ironman** guide and progress tracker for CADVYN.
 
-## What's built
-- 65 persistent numbered steps across seven sections, from Tutorial Island to **99 Firemaking**.
-- **Druidic Ritual / Herblore before Wintertodt** and preparation for 20 Construction.
-- Each section has its own page, plus the continuous route and a Resume button.
-- Low-attention, semi-AFK and focused-play labels; warnings for dangerous HCIM steps.
-- Tick completion saved locally and (when signed in) in a **separate HCIM Guide Supabase project**, syncing across devices.
-- Export/import JSON backups and optional RSN/level milestones.
-- Five planned chapter placeholders; additional chapter step IDs can be added without changing existing progress.
+**Main website:** https://camsterx.github.io/hcim-guide/
 
-## Publishing on GitHub Pages
-This repository is intended to host at `https://camsterx.github.io/hcim-guide/`.
+**Source route:** [B0aty HCIM Guide V3 on the OSRS Wiki](https://oldschool.runescape.wiki/w/Guide:B0aty_HCIM_Guide_V3)
 
-From **GitHub → hcim-guide → Settings → Pages → Build and deployment**, choose **Deploy from a branch**, `main`, `/ (root)` and Save. Wait for GitHub to publish; then open the URL. The site is static; no build command is required.
+## What the current website does
 
-## Supabase authentication redirect — REQUIRED
-The dedicated Supabase project is **HCIM Guide**, project reference `hkwedsvspmlctvahyuec`, UK London region. It is NOT the CADVYN project.
+- **Follows B0aty's V3 route order**, indexing **15 episodes / 236 banks and other route sections**, based on source metadata from 13 March 2026.
+- Browse banks, jump to an episode, track completion of each section and pick the next unfinished section.
+- Provides **original additional HCIM safety and preparation notes for the opening banks**.
+- Links to the **complete OSRS Wiki instructions** for each bank. **The full source instructions are not reproduced here.** When you finish the Wiki steps, tick that bank complete.
+- Save bank ticks and note ticks in Supabase when signed in, using a personal email magic link. Both tables have row-level security.
+- Download/import a JSON progress backup.
+- The **previous 65-step custom Firemaking route** is still available at [original.html](./original.html), using its original step IDs and stored progress.
 
-In **Supabase → HCIM Guide → Authentication → URL Configuration**:
-- Site URL: `https://camsterx.github.io/hcim-guide/`
-- Redirect URLs: add `https://camsterx.github.io/hcim-guide/`
+## Source and licensing
 
-Check **Authentication → Sign In / Providers → Email** is enabled. This site uses an email magic link through Supabase Auth. The project has two database tables: `public.step_progress` and `public.hcim_profiles`. Both already have **Row Level Security** enabled and policies allowing only the signed-in user to read/write their own records.
+This app is an independently written tracker *for* the B0aty route, not an endorsed or official version of the guide. Bank titles, structure, and video references are credited to the OSRS Wiki project and the creator. OSRS Wiki content is published under **CC BY-NC-SA 3.0**; when redistributing adapted content follow the attribution, non-commercial, and share-alike terms. The independent supplemental notes are original. Always check the Wiki's latest text for source updates, precise inventory counts and combat requirements.
 
-The `config.js` file contains only a public Supabase URL and **publishable** key. NEVER add a Supabase secret, service-role key, password or private token to the public repository.
+## Hardcore warnings
 
-## Test cross-device saving
-1. Open the published website on your PC. Select **Settings → Sign in**.
-2. Request a sign-in link by email and open it on the same browser/device.
-3. Tick a step. Wait for **All changes synced**.
-4. Open the website on another device, sign in with **the same email**, and check the step is completed.
-5. Check **Settings → Download backup** occasionally. If you used the website before signing in, choose **Merge this device’s guest ticks** after sign-in.
+- Never blindly follow routes through the Stronghold of Security, Wilderness, dungeons, dangerous bosses, or unfamiliar aggressive NPCs. Prepare adequate Hitpoints, emergency escape and food.
+- B0aty's efficiency route may assume you are actively playing and able to react immediately. This app adds safety guidance, but not a risk audit of every one of the source guide's nearly 3,000 instructions.
+- Wintertodt **zero warmth is an unsafe death**; do not leave the minigame unattended on an HCIM.
+- B0aty's route unlocks **Herblore around Banks 10–11**, before its much later Wintertodt stages.
 
-Email magic links may be rate-limited by Supabase's built-in email sender. For reliable large-scale usage, configure a custom SMTP provider. This is unnecessary to start personal testing.
+## Cloud setup
 
-## Extending chapters
-Add a chapter object in `data/chapters.js`. Each step is `[permanentID,title,description,attentionTag,optionalRiskWarning]`. Do not rename existing step IDs: those are the keys used in the database to track progress. All chapter pages, progress totals and the main continuous route update automatically.
+Supabase project: **HCIM Guide** (not CADVYN), UK region, public project reference `hkwedsvspmlctvahyuec`.
 
-## Danger rules
-- Wintertodt is an **unsafe death** for a Hardcore Ironman; keep warmth above zero.
-- Do not AFK while traversing dangerous areas, during Druidic Ritual or during combat.
-- Even the safe-looking parts of OSRS should be checked against the current OSRS Wiki before risky actions. Guides cannot remove all risk.
+Supabase **Authentication > URL Configuration** should include `https://camsterx.github.io/hcim-guide/` as both Site URL and an allowed Redirect URL. The Email provider must be on.
 
-No connection is made to your RuneLite account or OSRS credentials. This is an independent fan project, not affiliated with Jagex.
+Public frontend keys live in `config.js`. Never commit a service-role key, secret key or password.
+
+GitHub Pages should deploy the **main** branch from **/(root)**. The site uses static ES modules with no build step.
+
+The tables `step_progress` and `hcim_profiles` are already present in this separate Supabase project. `step_progress` uses unique `user_id,step_id` records and authenticated user-only row-level security.
+
+### Testing
+
+1. Open the published site and sign in with your email link.
+2. Mark a new bank completed, wait for **All changes synced**.
+3. Open the website on another device and sign in with the same email.
+4. Verify the completion tick matches.
+5. Periodically use **Download backup**.
+
+## Files
+
+- `index.html` / `boaty-styles.css` / `boaty-app.js`: Current B0aty route tracker.
+- `data/b0aty-index.js`: Route metadata (15 episodes, 236 sections, source credit).
+- `data/b0aty-notes.js`: Original, extra HCIM advice and condensed checkpoints for initial sections.
+- `original.html` / `app.js` / `data/chapters.js` / `styles.css`: Original custom Firemaking route, retained intact for rollback and old progress.
+- `config.js`: Publishable browser Supabase credentials only.
+- `supabase/schema.sql`: Schema reference for the *HCIM Guide* project only.
+
+## Maintenance and future chapters
+
+Update the data index when the source guide changes. Never recycle or rename IDs that have saved progress. Bank completion IDs begin with `b0-` and don't clash with the original `c01-` IDs, so both routes' saved progress can coexist in Supabase safely.
+
+This is an unofficial, non-commercial fan project and is not affiliated with Jagex.
